@@ -1,5 +1,6 @@
 package com.example.billingservice.entities;
 
+import com.example.billingservice.enums.OrderStatus;
 import com.example.billingservice.model.Customer;
 import lombok.*;
 
@@ -21,6 +22,8 @@ public class Bill {
 
     private Date billingDate;
 
+    private OrderStatus status;
+
     @OneToMany(mappedBy = "bill")
     private Collection<ProductItem> productItems;
 
@@ -29,5 +32,12 @@ public class Bill {
     @Transient
     private Customer customer;
 
+    public double getTotal(){
+        double somme=0;
+        for(ProductItem pi:productItems){
+            somme+=pi.getAmount();
+        }
+        return somme;
+    }
 
 }

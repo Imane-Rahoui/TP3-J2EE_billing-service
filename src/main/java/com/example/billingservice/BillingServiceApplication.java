@@ -2,6 +2,7 @@ package com.example.billingservice;
 
 import com.example.billingservice.entities.Bill;
 import com.example.billingservice.entities.ProductItem;
+import com.example.billingservice.enums.OrderStatus;
 import com.example.billingservice.feign.CustomerRestClient;
 import com.example.billingservice.feign.ProductItemRestClient;
 import com.example.billingservice.model.Customer;
@@ -17,6 +18,7 @@ import org.springframework.hateoas.PagedModel;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
 
 @EnableFeignClients
@@ -26,31 +28,40 @@ public class BillingServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(BillingServiceApplication.class, args);
     }
-
     @Bean
-    CommandLineRunner start(BillRepository billRepository,
-                            ProductItemRepository productItemRepository,
-                            CustomerRestClient customerRestClient,
-                            ProductItemRestClient productItemRestClient) {
+    CommandLineRunner start(
+            BillRepository orderRepository,
+            ProductItemRepository productItemRepository,
+            CustomerRestClient customerRestClientService,
+            ProductItemRestClient inventoryRestClientService){
         return args -> {
-            Customer customer = customerRestClient.getCustomerById(1L);
-            Bill bill = billRepository.save(new Bill(null, new Date(), null, customer.getId(), null));
-            PagedModel<Product> products = productItemRestClient.pageProducts(0,3);
-            products.forEach(
-            product -> {
-                ProductItem productItem = new ProductItem();
-                productItem.setPrice(product.getPrice());
-                productItem.setQuantity(new Random().nextInt(100)); // nbr aléatoire entre 1 et 101
-                productItem.setBill(bill);
-                productItem.setProductID(product.getId());
-                productItemRepository.save(productItem);
+            List<Customer> customers=customerRestClientService.allCustomers().getContent().stream().toList();
+            List<Product> products=inventoryRestClientService.allProducts().getContent().stream().toList();
+            Long customerId=1L;
+            Random random=new Random();
+            Customer customer=customerRestClientService.customerById(customerId);
+            for (int i = 0; i <20 ; i++) {
+                Bill order=Bill.builder()
+                        .customerid(customers.get(random.nextInt(customers.size())).getId())
+                        .status(Math.random()>0.5? OrderStatus.PENDING:OrderStatus.CREATED)
+                        .billingDate(new Date())
+                        .build();
+                Bill savedOrder = orderRepository.save(order);
+                for (int j = 0; j < products.size() ; j++) {
+                    if(Math.random()>0.70){
+                        ProductItem productItem=ProductItem.builder()
+                                .bill(savedOrder)
+                                .productID(products.get(j).getId())
+                                .price(products.get(j).getPrice())
+                                .quantity(1+random.nextInt(10))
+                                .discount(Math.random())
+                                .build();
+                        productItemRepository.save(productItem);
+                    }
 
+                }
             }
-            );
-            System.out.println("------------------------");
-            System.out.println(customer.getId());
-            System.out.println(customer.getEmail());
-            System.out.println(customer.getName());
         };
     }
+
 }

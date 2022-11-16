@@ -30,7 +30,7 @@ public class BillingRestController {
     public Bill getBill(@PathVariable(name = "id") Long id) {
         Bill bill = billRepository.findById(id).get();
 
-        Customer customer = customerRestClient.getCustomerById(bill.getCustomerid());
+        Customer customer = customerRestClient.customerById(bill.getCustomerid());
         bill.setCustomer(customer);
         billRepository.save(bill);
 
